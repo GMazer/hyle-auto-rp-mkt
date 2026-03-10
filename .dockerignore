@@ -1,0 +1,25 @@
+# Secrets — injected via env vars on Railway
+.env
+credentials.json
+token.json
+
+# Dev files
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Data & docs
+Raw Data/
+*.md
+skills/
+AGENTS.md
+CLAUDE.md
+
+# Temp
+*.tmp
+~$*.xlsx

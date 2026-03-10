@@ -4,6 +4,7 @@ Hyle Auto Report MKT — Configuration
 Load environment variables và define constants.
 """
 
+import json
 import os
 import logging
 from dotenv import load_dotenv
@@ -26,6 +27,22 @@ GOOGLE_SHEETS_CREDENTIALS_FILE: str = os.getenv(
 GOOGLE_OAUTH_TOKEN_FILE: str = os.getenv(
     "GOOGLE_OAUTH_TOKEN_FILE", "token.json"
 )
+
+# --- Railway / Headless Deploy ---
+# Trên Railway, không có file credentials.json / token.json trong repo.
+# Thay vào đó, paste NỘI DUNG JSON vào env vars này:
+_GOOGLE_CREDENTIALS_JSON: str = os.getenv("GOOGLE_CREDENTIALS_JSON", "")
+_GOOGLE_TOKEN_JSON: str = os.getenv("GOOGLE_TOKEN_JSON", "")
+
+if _GOOGLE_CREDENTIALS_JSON and not os.path.exists(GOOGLE_SHEETS_CREDENTIALS_FILE):
+    with open(GOOGLE_SHEETS_CREDENTIALS_FILE, "w") as f:
+        f.write(_GOOGLE_CREDENTIALS_JSON)
+    logging.info("Wrote credentials.json from env var")
+
+if _GOOGLE_TOKEN_JSON and not os.path.exists(GOOGLE_OAUTH_TOKEN_FILE):
+    with open(GOOGLE_OAUTH_TOKEN_FILE, "w") as f:
+        f.write(_GOOGLE_TOKEN_JSON)
+    logging.info("Wrote token.json from env var")
 # ID của spreadsheet MKT template (sẽ được copy mỗi lần tạo báo cáo)
 GOOGLE_SHEETS_TEMPLATE_ID: str = os.getenv("GOOGLE_SHEETS_TEMPLATE_ID", "")
 # ID folder Google Drive để lưu các bản copy (optional)

@@ -253,7 +253,7 @@ def _write_data_preserving_formulas(
     # Fix cell format — template có thể dùng format % hoặc khác
     # Force các cột tiền tệ sang format số thường (đ)
     end_row = start_row + len(rows) - 1
-    number_format = {"numberFormat": {"type": "NUMBER", "pattern": "#,##0"}}
+    number_format = {"numberFormat": {"type": "NUMBER", "pattern": '#,##0"đ"'}}
     ws.format(f"C{start_row}:E{end_row}", number_format)
     ws.format(f"G{start_row}:G{end_row}", number_format)
 

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 Hyle Auto Report MKT — Telegram Bot Entry Point
-Nhận nhiều file Excel từ user → buffer → /report để gộp & ghi Google Sheets.
+Nhận nhiều file Excel từ user → buffer → bấm nút tạo báo cáo → ghi Google Sheets.
 
 Flow:
     1. User gửi file .xlsx → bot parse & buffer (debounce 3s)
-    2. Khi hết file (3s không nhận thêm) → gửi 1 summary gộp
-    3. User gửi /report → aggregate tất cả records → ghi Sheets → trả kết quả
+    2. Khi hết file (3s không nhận thêm) → gửi summary + nút 📊 Tạo báo cáo
+    3. User bấm nút → aggregate tất cả records → ghi Sheets → trả kết quả
     4. /clear để xóa buffer, bắt đầu lại
 
 Usage:
@@ -19,6 +19,7 @@ import tempfile
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     Application,
+    CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
     MessageHandler,
@@ -44,6 +45,9 @@ KEY_STATUS_MSG = "status_message"
 # Thời gian chờ sau file cuối cùng trước khi gửi summary (giây)
 BATCH_DEBOUNCE_SECONDS = 3.0
 
+# Callback data cho nút tạo báo cáo
+REPORT_CALLBACK = "create_report"
+
 
 # --- Handlers ---
 
@@ -61,9 +65,9 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         "📌 *Lệnh:*\n"
         "  /start — Hiện thông tin này\n"
         "  /help — Hướng dẫn sử dụng\n"
-        "  /report — Tạo báo cáo từ các file đã gửi\n"
         "  /clear — Xóa buffer, bắt đầu lại\n"
-        "  /status — Xem số file đã gửi\n",
+        "  /status — Xem số file đã gửi\n\n"
+        "📊 Sau khi gửi file, bấm nút *Tạo báo cáo* để tổng hợp.",
         parse_mode="Markdown",
     )
 
@@ -77,12 +81,12 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "📖 *HƯỚNG DẪN SỬ DỤNG*\n\n"
         "1️⃣ Gửi các file `.xlsx` (báo cáo từ Facebook Ads Manager)\n"
         "   ↳ Có thể gửi nhiều file cùng lúc — bot tự gộp\n"
-        "2️⃣ Gửi `/report` khi đã gửi đủ file\n"
+        "2️⃣ Bấm nút *📊 Tạo báo cáo* khi đã gửi đủ file\n"
         "3️⃣ Bot sẽ tự động:\n"
         "   • Gộp dữ liệu theo mã sản phẩm\n"
         "   • Điền vào Google Sheets theo format MKT\n"
         "   • Trả về bảng tóm tắt + link Sheets\n\n"
-        "📎 Gửi bao nhiêu file cũng được, /report khi sẵn sàng.\n"
+        "📎 Gửi bao nhiêu file cũng được, bấm nút khi sẵn sàng.\n"
         "🗑 Dùng /clear để xóa và bắt đầu lại.\n"
         "⚠️ Chỉ hỗ trợ file `.xlsx` (không hỗ trợ `.xls`).",
         parse_mode="Markdown",
@@ -217,19 +221,28 @@ async def _batch_summary(bot, chat_id: int, user_data: dict) -> None:
     summary_text = (
         f"✅ *Đã nhận {len(files)} file* ({record_count} dòng dữ liệu)\n\n"
         f"{file_list}\n\n"
-        "↳ Gửi thêm file hoặc /report để tạo báo cáo"
+        "↳ Gửi thêm file hoặc bấm nút bên dưới để tạo báo cáo"
+    )
+
+    report_keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("📊 Tạo báo cáo", callback_data=REPORT_CALLBACK)]]
     )
 
     if status_msg:
         try:
-            await status_msg.edit_text(summary_text, parse_mode="Markdown")
+            await status_msg.edit_text(
+                summary_text, parse_mode="Markdown",
+                reply_markup=report_keyboard,
+            )
         except Exception:
             await bot.send_message(
-                chat_id=chat_id, text=summary_text, parse_mode="Markdown",
+                chat_id=chat_id, text=summary_text,
+                parse_mode="Markdown", reply_markup=report_keyboard,
             )
     else:
         await bot.send_message(
-            chat_id=chat_id, text=summary_text, parse_mode="Markdown",
+            chat_id=chat_id, text=summary_text,
+            parse_mode="Markdown", reply_markup=report_keyboard,
         )
 
     # Reset status message reference
@@ -241,10 +254,13 @@ async def _batch_summary(bot, chat_id: int, user_data: dict) -> None:
     )
 
 
-async def report_handler(
+async def report_callback_handler(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    """Handler cho /report — tạo báo cáo từ tất cả file đã buffer."""
+    """Handler cho nút 📊 Tạo báo cáo — tạo báo cáo từ tất cả file đã buffer."""
+    query = update.callback_query
+    await query.answer()
+
     user = update.effective_user
     if not _is_allowed(user.id):
         return
@@ -253,15 +269,16 @@ async def report_handler(
     files = context.user_data.get(KEY_FILES, [])
 
     if not records:
-        await update.message.reply_text(
-            "📭 Chưa có file nào! Gửi file `.xlsx` trước rồi /report.",
+        await query.edit_message_text(
+            "📭 Chưa có file nào! Gửi file `.xlsx` trước.",
             parse_mode="Markdown",
         )
         return
 
-    status_msg = await update.message.reply_text(
+    await query.edit_message_text(
         f"⏳ Đang xử lý {len(files)} file ({len(records)} dòng)..."
     )
+    status_msg = query.message
 
     try:
         # Process data — gộp theo mã sản phẩm
@@ -350,11 +367,15 @@ async def status_handler(
         f"  {i+1}. `{f}`" for i, f in enumerate(files)
     )
 
+    report_keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("📊 Tạo báo cáo", callback_data=REPORT_CALLBACK)]]
+    )
     await update.message.reply_text(
         f"📁 *Buffer hiện tại: {len(files)} file, {record_count} dòng*\n"
         f"{file_list}\n\n"
-        "↳ /report để tạo báo cáo | /clear để xóa",
+        "↳ Bấm nút bên dưới để tạo báo cáo | /clear để xóa",
         parse_mode="Markdown",
+        reply_markup=report_keyboard,
     )
 
 
@@ -387,7 +408,7 @@ def main() -> None:
     # Register handlers
     app.add_handler(CommandHandler("start", start_handler))
     app.add_handler(CommandHandler("help", help_handler))
-    app.add_handler(CommandHandler("report", report_handler))
+    app.add_handler(CallbackQueryHandler(report_callback_handler, pattern=f"^{REPORT_CALLBACK}$"))
     app.add_handler(CommandHandler("clear", clear_handler))
     app.add_handler(CommandHandler("status", status_handler))
     app.add_handler(
