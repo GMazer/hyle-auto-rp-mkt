@@ -1,2 +1,37 @@
-*
-!.gitignore
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual Environment
+venv/
+.venv/
+ENV/
+
+# Environment & Secrets
+.env
+credentials.json
+token.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Data (reference only, không track)
+Raw Data/
+
+# Temp files
+*.tmp
+~$*.xlsx
