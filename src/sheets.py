@@ -98,27 +98,21 @@ def copy_template(report_title: str) -> gspread.Spreadsheet:
             "Hãy set trong file .env"
         )
 
-    # Copy spreadsheet (giữ nguyên format, màu, font, formulas)
-    copied = client.copy(
-        file_id=GOOGLE_SHEETS_TEMPLATE_ID,
-        title=report_title,
-        copy_permissions=False,
-    )
-
-    # Di chuyển vào folder nếu có FOLDER_ID
+    # Copy spreadsheet trực tiếp vào folder đích (giữ nguyên format, màu, font, formulas)
+    copy_kwargs = {
+        "file_id": GOOGLE_SHEETS_TEMPLATE_ID,
+        "title": report_title,
+        "copy_permissions": False,
+    }
     if GOOGLE_DRIVE_FOLDER_ID:
-        try:
-            client.move_file(copied.id, GOOGLE_DRIVE_FOLDER_ID)
-            logger.info(
-                "Đã chuyển '%s' vào folder %s",
-                report_title, GOOGLE_DRIVE_FOLDER_ID,
-            )
-        except Exception as e:
-            logger.warning("Không thể di chuyển vào folder: %s", e)
+        copy_kwargs["folder_id"] = GOOGLE_DRIVE_FOLDER_ID
+
+    copied = client.copy(**copy_kwargs)
 
     logger.info(
-        "Đã copy template → '%s' (ID: %s)",
+        "Đã copy template → '%s' (ID: %s, folder: %s)",
         report_title, copied.id,
+        GOOGLE_DRIVE_FOLDER_ID or "My Drive",
     )
 
     return copied
