@@ -9,5 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy source code
 COPY src/ ./src/
 
+# Render Web Service uses PORT env var (default 10000)
+EXPOSE 10000
+
 # Run bot
 CMD ["python", "-m", "src.bot"]

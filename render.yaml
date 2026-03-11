@@ -1,5 +1,5 @@
 services:
-  - type: background-worker
+  - type: web
     name: hyle-mkt-bot
     runtime: docker
     dockerfilePath: ./Dockerfile
@@ -19,3 +19,5 @@ services:
         sync: false
       - key: LOG_LEVEL
         value: INFO
+      - key: PORT
+        value: "10000"
