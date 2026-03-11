@@ -422,9 +422,14 @@ def main() -> None:
         MessageHandler(filters.Document.ALL, document_handler)
     )
 
-    # Start polling
+    # Start polling (bootstrap_retries cho phép retry khi network chưa sẵn sàng)
     logger.info("🟢 Bot đang chạy... (Ctrl+C để dừng)")
-    app.run_polling(drop_pending_updates=True)
+    app.run_polling(
+        drop_pending_updates=True,
+        bootstrap_retries=5,
+        connect_timeout=30,
+        read_timeout=30,
+    )
 
 
 if __name__ == "__main__":
