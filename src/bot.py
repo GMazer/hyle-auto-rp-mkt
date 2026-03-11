@@ -403,6 +403,13 @@ def main() -> None:
     logger.info("🤖 Khởi động Hyle Auto Report MKT Bot...")
     logger.info("   Allowed users: %s", ALLOWED_USERS or "(tất cả)")
 
+    # Hugging Face Spaces: cần HTTP server cho health check
+    if os.environ.get("SPACE_ID"):
+        from src.health import start_health_server
+        start_health_server(port=7860)
+        logger.info("   Health check server on :7860 (HF Spaces)")
+
+
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
     # Register handlers
