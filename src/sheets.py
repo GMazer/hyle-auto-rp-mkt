@@ -109,6 +109,9 @@ def copy_template(report_title: str) -> gspread.Spreadsheet:
 
     copied = client.copy(**copy_kwargs)
 
+    # Chia sẻ: ai có link đều chỉnh sửa được
+    copied.share(email_address=None, perm_type="anyone", role="writer")
+
     logger.info(
         "Đã copy template → '%s' (ID: %s, folder: %s)",
         report_title, copied.id,
