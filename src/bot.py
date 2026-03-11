@@ -427,8 +427,6 @@ def main() -> None:
     app.run_polling(
         drop_pending_updates=True,
         bootstrap_retries=5,
-        connect_timeout=30,
-        read_timeout=30,
     )
 
 
